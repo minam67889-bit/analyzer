@@ -32,6 +32,19 @@ around a plugin test framework and an evidence-first verdict engine.
 
 ## Quick start
 
+### Windows launcher
+
+Extract the complete project, install Python 3.11 or newer, then double-click
+`run_adversarylab.bat`. It creates a virtual environment, installs the application and
+optional Windows/UI/crypto dependencies (internet required), creates `config/lab.toml` from
+the example if it does not already exist, and launches the desktop UI in **dry-run mode**.
+It never overwrites your existing configuration. Edit `config/lab.toml` for your authorized
+lab before doing any live work. Npcap, ADB, supported hardware, and additional setup may be
+needed for live capabilities; the launcher does not install these. The Windows launcher has
+not yet been validated on a Windows host.
+
+### Manual setup
+
 ```bash
 python -m venv .venv
 .venv/bin/pip install -e .            # core
@@ -61,7 +74,7 @@ adversarylab report <session-dir>/report/assessment.json \
     --output <session-dir>/report/out
 
 # Desktop UI (same orchestrator as the CLI)
-python -m adversarylab.ui
+python -m adversarylab.ui.app --config config/lab.toml
 ```
 
 `--assume-capabilities` exists for dry-run planning only and is labelled as such in the
