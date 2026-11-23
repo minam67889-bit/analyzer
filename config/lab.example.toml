@@ -1,0 +1,67 @@
+# Adversary Lab — example laboratory configuration
+# Copy to config/lab.toml and adjust to your authorized laboratory.
+
+[lab]
+name = "adversary-lab-01"
+session_prefix = "sess"
+evidence_root = "evidence"
+log_level = "INFO"
+
+[scope]
+# Single ownership configuration: everything under these roots is lab-owned.
+domain_roots = ["lab.test", "lab.local"]
+wildcard_subdomains = ["*.lab.test", "*.lab.local"]
+ip_ranges = ["10.10.0.0/16", "172.16.0.0/12", "192.168.100.0/24", "fd00:1234::/48"]
+lab_subnets = ["10.10.0.0/16", "fd00:1234::/48"]
+lab_infra_addresses = ["10.10.0.1", "fd00:1234::1"]
+deny_egress_by_default = true
+
+[infrastructure]
+backend = "auto"            # auto | winrt_hotspot | hosted_network | external_ap | hostapd
+adapter_hint = ""           # optional GUID/description substring
+ssid = "AdversaryLab"
+passphrase = "ChangeMe-Lab-2026!"
+band = "5GHz"               # 2.4GHz | 5GHz | auto
+channel = 36
+ipv4_subnet = "10.10.0.0/24"
+ipv4_gateway = "10.10.0.1"
+ipv4_dhcp_start = "10.10.0.50"
+ipv4_dhcp_end = "10.10.0.200"
+ipv6_prefix = "fd00:1234::/64"
+ipv6_gateway = "fd00:1234::1"
+isolation = true
+egress_allow = ["10.10.0.0/16", "fd00:1234::/48"]
+
+[device]
+adb_serial = ""             # empty = auto-detect single device
+mac = ""                    # authorized device MAC (empty = first observed)
+require_user_confirmation = true
+
+[firewall]
+architecture = "auto"       # auto | vpnservice | root | private_dns | api
+package = ""                # target firewall package, empty = auto-detect
+
+[tests]
+auto_select = true
+include_categories = ["discovery", "dns", "dhcp", "arp", "ipv6", "tls", "http", "mobile", "wireless", "chain"]
+exclude_test_ids = []
+observation_window_seconds = 6.0
+repeat_count = 1
+random_seed = 42
+# Reports redact synthetic cookie values unless this is explicitly enabled.
+reveal_cookie_values = false
+# Certificate installation is a separate, documented opt-in experiment. Off by default:
+# no test installs a CA or otherwise modifies the Android device.
+allow_certificate_install_opt_in = false
+allow_dynamic_campaigns = true
+
+[assessment]
+run_recovery_checks = true
+verify_isolation = true
+max_concurrent_scenarios = 1
+stop_on_critical = false
+# Multi-stage campaigns run after the single-test pass and preserve observations
+# between their own stages.
+run_campaigns = true
+campaign_ids = []            # empty = all predefined campaigns
+allow_dynamic_campaigns = true

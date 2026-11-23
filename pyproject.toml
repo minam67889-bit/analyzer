@@ -1,0 +1,54 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "adversarylab"
+version = "0.1.0"
+description = "Wireless adversary emulation and mobile firewall security validation platform"
+readme = "README.md"
+requires-python = ">=3.11"
+license = { text = "MIT" }
+authors = [{ name = "Adversary Lab Engineering" }]
+keywords = ["security", "wireless", "adversary-emulation", "android", "firewall", "802.11"]
+classifiers = [
+  "Development Status :: 3 - Alpha",
+  "Environment :: Win32 (MS Windows)",
+  "Intended Audience :: Information Technology",
+  "Operating System :: Microsoft :: Windows :: Windows 10",
+  "Operating System :: Microsoft :: Windows :: Windows 11",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Topic :: Security",
+]
+
+dependencies = []
+
+[project.optional-dependencies]
+windows = ["scapy>=2.5.0"]
+ui = ["PySide6>=6.6.0"]
+crypto = ["cryptography>=42.0.0"]
+dev = ["pytest>=8.0.0", "pytest-cov>=5.0.0", "ruff>=0.5.0"]
+
+[project.scripts]
+adversarylab = "adversarylab.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q"
+pythonpath = ["src"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP"]
+ignore = ["E501"]
+
+[tool.ruff.lint.per-file-ignores]
+# Qt model overrides conventionally default to QModelIndex().
+"src/adversarylab/ui/app.py" = ["B008"]

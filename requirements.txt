@@ -1,0 +1,9 @@
+# Core runtime has no third-party dependencies (stdlib only) for maximum portability.
+# Install the extras relevant to your target:
+#   pip install -e .[windows]   # scapy for packet craft/inject (requires Npcap)
+#   pip install -e .[ui]        # PySide6 desktop UI
+#   pip install -e .[crypto]    # lab CA generation
+#   pip install -e .[dev]       # tests and lint
+scapy==2.6.1
+PySide6==6.7.2
+cryptography==43.0.1
