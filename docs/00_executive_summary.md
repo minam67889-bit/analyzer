@@ -62,13 +62,14 @@ simulation as proof of wireless resistance.
 - 12 research/engineering documents in `docs/` (this file included).
 - Full source tree in `src/adversarylab/` with modular platform adapters.
 - Plugin-based test framework with a catalog of **38 adversarial tests** across 12 categories.
-- Cookie Exposure Assessment Engine with laboratory ground truth, redaction and verification.
+- Cookie Exposure Assessment Engine with laboratory ground truth, redaction, verification, and
+  a per-finding `evidence_ref` resolving to a hashed lab-server exchange record.
 - Longitudinal, session-aware correlation engine with attacker/defender dual views.
 - Multi-stage campaign orchestrator (predefined + dynamically assembled from discovered conditions).
 - Nine mandatory reports (cookie exposure, session security, downgrade resistance, TLS/certificate,
   attacker capability, attack chain, longitudinal analysis, attacker-visible inventory, defender
   detection/prevention).
-- Automated test suite: **144 tests passing** on the Linux development sandbox.
+- Automated test suite: **146 tests passing** on the Linux development sandbox.
 - CLI (`python -m adversarylab`) and PySide6 desktop UI (`python -m adversarylab.ui`).
 - End-to-end dry-run assessment: 37 single-test executions plus 6 campaigns, hashed evidence
   manifest, recovery verified; verdicts `INCONCLUSIVE`/`UNSUPPORTED` where no device traffic

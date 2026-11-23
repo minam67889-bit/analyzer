@@ -193,7 +193,7 @@ class CookieExposureEngine:
                 classification=classification,
                 observed_value=value, value_available=True,
                 observed_via=via, connection=connection,
-                evidence_ref=event.evidence_ref, timestamp=event.timestamp,
+                evidence_ref=_event_evidence(event), timestamp=event.timestamp,
                 attributes_known={**_merge_attributes(row[0]["attributes"], attributes)},
                 verified_against_ground_truth=verified_row is not None,
                 ground_truth_value_known=True,
@@ -207,7 +207,7 @@ class CookieExposureEngine:
                 classification=CookieClassification.ATTACKER_OBSERVED_PLAINTEXT,
                 observed_value=value, value_available=True,
                 observed_via=via, connection=connection,
-                evidence_ref=event.evidence_ref, timestamp=event.timestamp,
+                evidence_ref=_event_evidence(event), timestamp=event.timestamp,
                 attributes_known=dict(attributes),
                 verified_against_ground_truth=False,
                 ground_truth_value_known=False,
@@ -299,6 +299,13 @@ class CookieExposureEngine:
             "classifications": counts,
             "interception_enabled": self.interception_enabled,
         }
+
+
+def _event_evidence(event: NetworkEvent) -> str | None:
+    """Evidence reference from the event itself or from its source-specific details."""
+    if event.evidence_ref:
+        return event.evidence_ref
+    return (event.details or {}).get("evidence_ref")
 
 
 def _connection_from_event(event: NetworkEvent) -> dict[str, Any]:

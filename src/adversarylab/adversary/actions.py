@@ -151,6 +151,9 @@ class ServiceBackedActionRunner(LabActionRunner):
         session_id: str = "",
         device_id: str | None = None,
         interface: str | None = None,
+        evidence: Any | None = None,
+        test_id: str | None = None,
+        scenario_id: str | None = None,
     ) -> None:
         self.dns_server = dns_server
         self.dhcp_server = dhcp_server
@@ -159,6 +162,10 @@ class ServiceBackedActionRunner(LabActionRunner):
         self.session_id = session_id
         self.device_id = device_id
         self.interface = interface
+        # Laboratory evidence store and correlation ids, set per test by the orchestrator.
+        self.evidence = evidence
+        self.test_id = test_id
+        self.scenario_id = scenario_id
         self._sinks: dict[str, SinkHandle] = {}
         self._tls_servers: list[Any] = []
         self._http_servers: dict[int, Any] = {}
@@ -431,6 +438,7 @@ class ServiceBackedActionRunner(LabActionRunner):
             server = LabHttpServer(
                 bind_addr=bind_addr, port=port, bus=self.bus,
                 session_id=self.session_id, device_id=self.device_id,
+                evidence=self.evidence, test_id=self.test_id, scenario_id=self.scenario_id,
             )
             try:
                 server.start()

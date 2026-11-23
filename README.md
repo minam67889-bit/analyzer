@@ -57,6 +57,7 @@ adversarylab run --config config/lab.toml            # tests + campaigns
 # 4. Render a report from the session's assessment.json
 adversarylab report <session-dir>/report/assessment.json \
     --evidence-manifest <session-dir>/manifest.json \
+    --config config/lab.toml \
     --output <session-dir>/report/out
 
 # Desktop UI (same orchestrator as the CLI)
@@ -94,7 +95,7 @@ ownership/inventory discovery, evidence integrity (including tamper detection), 
 output parsers, lab services over real sockets, the orchestrator end-to-end, report
 rendering, and static UI wiring (every button/action must have a handler).
 
-Current status on the development sandbox: **144 tests pass**; catalog discovers **38 tests**
+Current status on the development sandbox: **146 tests pass**; catalog discovers **38 tests**
 across 12 categories; a full assessment runs end-to-end (single tests, predefined and dynamic
 campaigns, cookie exposure and longitudinal analysis) and writes a hashed evidence manifest.
 
@@ -106,6 +107,13 @@ campaigns, cookie exposure and longitudinal analysis) and writes a hashed eviden
 `tls_certificate_security`, `network_attacker_capability`, `multi_stage_attack_chain`,
 `longitudinal_traffic_analysis`, `attacker_visible_data_inventory`,
 `defender_detection_prevention` — each as HTML and JSON, every finding referencing evidence.
+
+Cookie values are redacted by default (`tests.reveal_cookie_values = false`): reports show a
+4-character prefix/suffix plus a short SHA-256 prefix, so two references to the same cookie are
+still recognisable without printing the value. `attacker_visible_data_inventory` is redacted
+unconditionally, even when the operator opts in for their own cookie-exposure report. Every
+cookie finding carries an `evidence_ref` that resolves to a hashed `http_exchange` record in the
+session evidence store, so an observed value is always traceable to a reproducible capture.
 
 ## Attacker model
 

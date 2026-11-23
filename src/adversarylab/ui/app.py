@@ -196,7 +196,12 @@ class AppController(QObject):
         paths = ReportGenerator(result).write(output_dir, evidence_records=evidence)
         from ..reporting.extra_reports import ReportBundle
 
-        bundle = ReportBundle(result).write(Path(output_dir) / "mandatory")
+        reveal = bool(
+            self.orchestrator.config.tests.to_dict().get("reveal_cookie_values", False)
+        )
+        bundle = ReportBundle(result, reveal_cookie_values=reveal).write(
+            Path(output_dir) / "mandatory"
+        )
         paths.update({f"mandatory/{key}": value for key, value in bundle.items()})
         return {k: str(v) for k, v in paths.items()}
 

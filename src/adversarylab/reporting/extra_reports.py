@@ -20,7 +20,7 @@ from pathlib import Path
 from typing import Any
 
 from ..analysis.views import attacker_view, attacker_visible_inventory, defender_view
-from ..cookies.model import CookieClassification, CookieObservation
+from ..cookies.model import CookieClassification, CookieObservation, redact_value
 from ..core.results import TestResult
 from ..logging_config import get_logger
 
@@ -43,9 +43,10 @@ code { background: #f4f4f6; padding: 0.1rem 0.3rem; }
 class ReportBundle:
     """Writes the full report set for an assessment."""
 
-    def __init__(self, result: Any) -> None:
+    def __init__(self, result: Any, *, reveal_cookie_values: bool = False) -> None:
         self.result = result
         self._cookie_observations = _cookie_observations(result)
+        self.reveal_cookie_values = reveal_cookie_values
 
     # ------------------------------------------------------------------
     def write(self, directory: str | Path) -> dict[str, Path]:
@@ -88,7 +89,9 @@ class ReportBundle:
     def _cookie_exposure(self) -> tuple[dict[str, Any], str]:
         from ..cookies.report import CookieExposureReport
 
-        report = CookieExposureReport(self._cookie_observations)
+        report = CookieExposureReport(
+            self._cookie_observations, reveal_values=self.reveal_cookie_values
+        )
         return report.to_dict(), report.to_html()
 
     # 2 -----------------------------------------------------------------
@@ -485,7 +488,8 @@ def _tls_flows(longitudinal: dict[str, Any]) -> list[dict[str, Any]]:
 
 def _cookie_row(observation: CookieObservation) -> str:
     css = "exposed" if observation.value_available else ""
-    value = observation.observed_value or ""
+    # This table renders in the attacker-visible inventory: never print a raw value.
+    value = redact_value(observation.observed_value) or ""
     return (
         f"<tr class='{css}'>"
         f"<td>{_e(observation.site_id)}</td><td>{_e(observation.domain)}</td>"

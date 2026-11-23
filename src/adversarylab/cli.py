@@ -31,6 +31,7 @@ from .core.bus import EventBus
 from .core.capability import Capability, CapabilityReport, CapabilitySet
 from .core.store import Database
 from .errors import PlatformError
+from .logging_config import get_logger
 from .platform.adb import AdbClient, AndroidTelemetry
 from .platform.windows import WindowsCapabilityProbe
 from .reporting.report import ReportGenerator
@@ -217,10 +218,25 @@ def cmd_report(args: argparse.Namespace) -> int:
     paths = ReportGenerator(result).write(args.output, evidence_records=evidence)
     from .reporting.extra_reports import ReportBundle
 
-    bundle = ReportBundle(result).write(Path(args.output) / "mandatory")
+    reveal = bool(_report_config(getattr(args, "config", None)).get("reveal_cookie_values", False))
+    bundle = ReportBundle(result, reveal_cookie_values=reveal).write(
+        Path(args.output) / "mandatory"
+    )
     paths.update({f"mandatory/{k}": v for k, v in bundle.items()})
     print(json.dumps({k: str(v) for k, v in paths.items()}, indent=2))
     return 0
+
+
+def _report_config(config_path: str | None) -> dict[str, Any]:
+    """Read the [tests] section that governs how reports may render cookie values."""
+    try:
+        config = load_config(config_path) if config_path else default_config()
+        return config.tests.to_dict()
+    except Exception:  # pragma: no cover - report must survive a bad config
+        get_logger(__name__).warning(
+            "could not read config for report redaction; defaulting to redacted"
+        )
+        return {}
 
 
 def _result_from_dict(raw: dict[str, Any]) -> TestResult:
@@ -331,6 +347,8 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("assessment")
     p.add_argument("--evidence-manifest", default=None)
     p.add_argument("--output", default="report")
+    p.add_argument("--config", default=None,
+                   help="assessment config; governs cookie-value redaction in reports")
     p.set_defaults(func=cmd_report)
 
     p = sub.add_parser("pcap-parse", help="parse a PCAP/PCAPNG into normalized events")

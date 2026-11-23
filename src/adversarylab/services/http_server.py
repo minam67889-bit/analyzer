@@ -15,6 +15,7 @@ import threading
 from collections.abc import Callable
 from dataclasses import dataclass, field
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+from typing import Any
 
 from ..clock import Clock, SystemClock
 from ..core.events import EventCategory, EventSeverity, EventSource, make_event
@@ -73,6 +74,7 @@ class HttpLogEntry:
     headers: dict[str, str]
     route: str | None = None
     set_cookies: list[str] = field(default_factory=list)
+    evidence_ref: str | None = None
 
 
 class LabHttpServer:
@@ -88,6 +90,9 @@ class LabHttpServer:
         session_id: str = "",
         device_id: str | None = None,
         default_body: bytes | None = None,
+        evidence: Any | None = None,
+        test_id: str | None = None,
+        scenario_id: str | None = None,
     ) -> None:
         self.bind_addr = bind_addr
         self.port = port
@@ -98,6 +103,11 @@ class LabHttpServer:
         self.session_id = session_id
         self.device_id = device_id
         self.default_body = default_body or b"<html><body><h1>Adversary Lab</h1></body></html>"
+        # Optional laboratory evidence store: each exchange is written to the hashed
+        # evidence bundle so a finding can point at the exact request that carried it.
+        self.evidence = evidence
+        self.test_id = test_id
+        self.scenario_id = scenario_id
         self.log: list[HttpLogEntry] = []
         self._httpd: ThreadingHTTPServer | None = None
         self._lock = threading.RLock()
@@ -212,6 +222,8 @@ class LabHttpServer:
             set_cookies=[cookie.header() for cookie in route.cookies] if route else [],
         )
         self.log.append(entry)
+        if self.evidence is not None:
+            entry.evidence_ref = self._record_evidence(entry)
         self._emit(entry)
 
         if "websocket" in (handler.headers.get("Upgrade") or "").lower():
@@ -260,6 +272,21 @@ class LabHttpServer:
             return
 
     # ------------------------------------------------------------------
+    def _record_evidence(self, entry: HttpLogEntry) -> str | None:
+        import json
+
+        try:
+            record = self.evidence.record_text(
+                json.dumps(entry.__dict__, indent=2, default=str),
+                kind="http_exchange", name=f"http-{entry.client}-{len(self.log)}.json",
+                sub="http", test_id=self.test_id, scenario_id=self.scenario_id,
+                metadata={"host": entry.host, "method": entry.method, "target": entry.target},
+            )
+            return record.evidence_id
+        except Exception:
+            logger.exception("failed to record HTTP exchange evidence")
+            return None
+
     def _emit(self, entry: HttpLogEntry) -> None:
         if self.bus is None:
             return
@@ -281,6 +308,7 @@ class LabHttpServer:
                     "headers": entry.headers,
                     "route": entry.route,
                     "set_cookies": list(entry.set_cookies),
+                    "evidence_ref": entry.evidence_ref,
                     "lab_server": True,
                 },
                 device_id=self.device_id,

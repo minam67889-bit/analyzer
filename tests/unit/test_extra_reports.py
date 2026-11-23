@@ -81,6 +81,17 @@ def test_cookie_report_redacts_value_by_default(tmp_path):
         "syn-session-0001" not in str(payload["observations"][0]["observed_value"])
 
 
+def test_attacker_inventory_redacts_even_when_operator_opted_in(tmp_path):
+    """The attacker-facing inventory is redacted unconditionally; only the
+    operator cookie-exposure report honours reveal_cookie_values."""
+    paths = ReportBundle(_assessment(), reveal_cookie_values=True).write(tmp_path / "m")
+    inventory = paths["attacker_visible_data_inventory"].read_text(encoding="utf-8")
+    assert "syn-session-0001" not in inventory
+    assert "sha256:" in inventory
+    cookie = paths["cookie_exposure"].read_text(encoding="utf-8")
+    assert "syn-session-0001" in cookie
+
+
 def test_defender_report_lists_missing_telemetry(tmp_path):
     paths = ReportBundle(_assessment()).write(tmp_path / "m")
     html = paths["defender_detection_prevention"].read_text(encoding="utf-8")

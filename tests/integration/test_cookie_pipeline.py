@@ -103,8 +103,71 @@ def test_orchestrator_end_to_end_plaintext_exposure(tmp_path, bus, db, all_capab
     observations = {o.name: o for o in engine.finalize()}
     assert observations["session_id"].classification is CookieClassification.ATTACKER_OBSERVED_PLAINTEXT
     assert observations["session_id"].verified_against_ground_truth is True
-    # The TLS-only site must remain not observable.
     assert observations["session_id"].observed_value == "syn-session-0001"
+    # The finding must reference reproducible evidence, not just a summary.
+    ref = observations["session_id"].evidence_ref
+    assert ref
+    refs = {e.evidence_ref for e in events} | {
+        (e.details or {}).get("evidence_ref") for e in events
+    }
+    assert ref in refs
+    evidence_ids = {r.evidence_id for r in orchestrator.evidence.records}
+    assert ref in evidence_ids
+    assert any(r.evidence_id == ref and r.test_id == "COOKIE-PLAINTEXT-EXPOSURE" for r in orchestrator.evidence.records)
+    # The connection tuple is recorded alongside the value.
+    assert observations["session_id"].connection.get("dst_port") == port
+
+
+def test_attacker_inventory_never_prints_a_raw_cookie_value(
+    tmp_path, bus, db, all_capabilities, clock
+):
+    """End-to-end: an observed plaintext value must not reach the attacker-facing report."""
+    from adversarylab.adversary.orchestrator import Orchestrator
+    from adversarylab.reporting.extra_reports import ReportBundle
+
+    port = _free_port()
+    config = default_config()
+    config.tests.observation_window_seconds = 0.05
+    orchestrator = Orchestrator(
+        config=config, registry=build_default_registry(), capabilities=all_capabilities,
+        bus=bus, db=db, evidence_root=tmp_path / "evidence",
+        action_runner=ServiceBackedActionRunner(bus=bus.publish, session_id=""),
+        clock=clock,
+    )
+    orchestrator.create_session()
+    orchestrator.prepare()
+    orchestrator.cookie_ground_truth.register(CookieSpec(
+        site_id="cookie-plaintext", domain="cookies.lab.test", name="session_id",
+        value="syn-secret-7f3a", httponly=True, samesite=SameSite.LAX, session=True,
+    ))
+    orchestrator.run_test("COOKIE-PLAINTEXT-EXPOSURE", params={"port": port})
+
+    conn = http.client.HTTPConnection("127.0.0.1", port, timeout=2)
+    conn.request("GET", "/login", headers={
+        "Host": "cookies.lab.test", "Cookie": "session_id=syn-secret-7f3a",
+    })
+    response = conn.getresponse()
+    response.read()
+    assert response.status == 200
+
+    from adversarylab.adversary.orchestrator import AssessmentResult
+
+    assessment = AssessmentResult(
+        session_id=orchestrator.session_id, status="running", started_at=clock.now()
+    )
+    orchestrator._analyse(assessment)
+    assert assessment.cookie_exposure["summary"]["attacker_observed_values"] >= 1
+    out = tmp_path / "reports"
+    ReportBundle(assessment).write(out)
+
+    inventory_html = (out / "attacker_visible_data_inventory.html").read_text()
+    inventory_json = (out / "attacker_visible_data_inventory.json").read_text()
+    cookie_html = (out / "cookie_exposure.html").read_text()
+    for document in (inventory_html, inventory_json, cookie_html):
+        assert "syn-secret-7f3a" not in document
+    # The redacted form is still verifiable: prefix + stable digest.
+    assert "syn-" in inventory_html
+    assert "sha256:" in cookie_html
 
 
 def test_report_redacts_by_default(tmp_path):

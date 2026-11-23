@@ -198,11 +198,7 @@ class Orchestrator:
             clock=self.clock,
         )
         # Keep any service-backed runner's event attribution in sync with this session.
-        if getattr(self.action_runner, "session_id", None) is not None:
-            try:
-                self.action_runner.session_id = self.session_id
-            except Exception:
-                logger.debug("action runner does not accept a session id")
+        self._sync_runner_context()
         self.evidence.create_session(
             config=_config_dict(self.config),
             environment=self.environment_fingerprint(),
@@ -306,6 +302,24 @@ class Orchestrator:
     # ------------------------------------------------------------------
     # Context factory
     # ------------------------------------------------------------------
+    def _sync_runner_context(self, test_id: str | None = None,
+                            scenario_id: str | None = None) -> None:
+        """Propagate session/test/scenario correlation ids to the action runner."""
+        runner = self.action_runner
+        if runner is None:
+            return
+        for attribute, value in (
+            ("session_id", self.session_id),
+            ("test_id", test_id),
+            ("scenario_id", scenario_id),
+            ("evidence", self.evidence),
+        ):
+            if hasattr(runner, attribute):
+                try:
+                    setattr(runner, attribute, value)
+                except Exception:
+                    logger.debug("action runner rejected %s", attribute)
+
     def _make_context(self, test_id: str, scenario_id: str | None = None) -> TestContext:
         if self.session_id is None or self.evidence is None or self.inventory is None:
             raise OrchestratorError("no active session; call create_session()/prepare() first")
@@ -351,6 +365,7 @@ class Orchestrator:
                 self.action_runner.revert_all()
             except Exception:
                 logger.exception("failed to revert adversary state before %s", test_id)
+        self._sync_runner_context(test_id, scenario_id)
         ctx = self._make_context(test_id, scenario_id)
         ctx.params = dict(params or {})
         module = self.registry.instantiate(test_id, ctx)
@@ -431,6 +446,7 @@ class Orchestrator:
             for step in scenario.steps:
                 self._check_pause()
                 self.cancel_token.raise_if_cancelled()
+                self._sync_runner_context(step.test_id, scenario.id)
                 ctx = self._make_context(step.test_id, scenario.id)
                 ctx.params = dict(step.params)
                 module = self.registry.instantiate(step.test_id, ctx)

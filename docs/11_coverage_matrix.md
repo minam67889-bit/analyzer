@@ -95,7 +95,7 @@ These gaps are tracked as explicit rows rather than being presented as complete 
 
 ## E. Measured status in this workspace (2026-11-23)
 
-- Automated tests: **144 passing** (`pytest -q`), covering core logic, protocol codecs,
+- Automated tests: **146 passing** (`pytest -q`), covering core logic, protocol codecs,
   link/PCAP round-trips, parsers, services over real sockets, the orchestrator, campaigns,
   cookie exposure, longitudinal analysis, dual views, all nine mandatory reports, and static
   UI wiring.
